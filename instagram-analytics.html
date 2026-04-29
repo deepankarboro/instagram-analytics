@@ -1,0 +1,533 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Instagram Analytics Dashboard</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --bg: #f8f8f6;
+    --surface: #ffffff;
+    --surface2: #f2f1ef;
+    --border: rgba(0,0,0,0.1);
+    --border2: rgba(0,0,0,0.18);
+    --text: #1a1a1a;
+    --text2: #666;
+    --text3: #999;
+    --radius: 12px;
+    --radius-sm: 8px;
+    --green: #1D9E75;
+    --red: #D85A30;
+    --blue: #378ADD;
+    --purple: #7F77DD;
+    --amber: #BA7517;
+  }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
+  .container { max-width: 1100px; margin: 0 auto; padding: 2rem 1.5rem; }
+
+  /* Header */
+  .header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 2rem; }
+  .brand { display: flex; align-items: center; gap: 12px; }
+  .ig-icon { width: 36px; height: 36px; border-radius: 10px; background: linear-gradient(135deg, #f09433,#e6683c,#dc2743,#cc2366,#bc1888); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .ig-icon svg { width: 20px; height: 20px; fill: white; }
+  .brand-name { font-size: 17px; font-weight: 600; color: var(--text); }
+  .brand-sub { font-size: 12px; color: var(--text3); margin-top: 1px; }
+  .header-right { display: flex; align-items: center; gap: 10px; }
+  .status-pill { display: inline-flex; align-items: center; gap: 6px; padding: 4px 12px; border-radius: 99px; font-size: 12px; font-weight: 500; background: #FAEEDA; color: #633806; }
+  .status-pill.live { background: #E1F5EE; color: #085041; }
+  .dot { width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+  .btn { padding: 8px 16px; border-radius: var(--radius-sm); border: 1px solid var(--border2); background: var(--surface); color: var(--text); font-size: 13px; font-weight: 500; cursor: pointer; font-family: inherit; transition: background 0.15s; }
+  .btn:hover { background: var(--surface2); }
+  .btn.connected { border-color: var(--green); color: var(--green); }
+
+  /* Setup guide */
+  .setup-guide { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 20px 24px; margin-bottom: 1.5rem; }
+  .setup-title { font-size: 14px; font-weight: 600; margin-bottom: 16px; }
+  .setup-step { display: flex; gap: 14px; margin-bottom: 14px; align-items: flex-start; }
+  .setup-step:last-child { margin-bottom: 0; }
+  .step-num { width: 24px; height: 24px; border-radius: 50%; background: var(--surface2); border: 1px solid var(--border); font-size: 11px; font-weight: 600; color: var(--text2); display: flex; align-items: center; justify-content: center; flex-shrink: 0; margin-top: 1px; }
+  .step-text { font-size: 13px; color: var(--text); line-height: 1.6; }
+  .step-text code { background: var(--surface2); padding: 1px 6px; border-radius: 4px; font-size: 11px; border: 1px solid var(--border); font-family: monospace; }
+  .app-id-row { display: flex; gap: 8px; margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--border); }
+  .app-id-row input { flex: 1; padding: 8px 12px; border: 1px solid var(--border2); border-radius: var(--radius-sm); font-size: 13px; font-family: inherit; background: var(--surface); color: var(--text); outline: none; }
+  .app-id-row input:focus { border-color: var(--blue); }
+  .app-id-row .btn { padding: 8px 16px; }
+
+  /* Error */
+  .error-card { background: #FCEBEB; border: 1px solid #F09595; border-radius: var(--radius); padding: 14px 18px; margin-bottom: 1.5rem; font-size: 13px; color: #A32D2D; display: none; }
+
+  /* Range tabs */
+  .range-tabs { display: flex; gap: 6px; margin-bottom: 1.5rem; }
+  .range-tab { padding: 6px 14px; border-radius: var(--radius-sm); border: 1px solid var(--border); background: transparent; color: var(--text2); font-size: 13px; cursor: pointer; font-family: inherit; transition: all 0.15s; }
+  .range-tab.active { background: var(--surface); color: var(--text); border-color: var(--border2); font-weight: 500; box-shadow: 0 1px 3px rgba(0,0,0,0.08); }
+
+  /* Section label */
+  .section-label { font-size: 11px; font-weight: 600; color: var(--text3); letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 10px; }
+
+  /* Metrics grid */
+  .metrics-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; margin-bottom: 1.5rem; }
+  .metric-card { background: var(--surface2); border-radius: var(--radius-sm); padding: 16px; }
+  .metric-label { font-size: 11px; color: var(--text2); margin-bottom: 8px; }
+  .metric-value { font-size: 24px; font-weight: 600; color: var(--text); }
+  .metric-delta { font-size: 11px; margin-top: 4px; }
+  .delta-up { color: var(--green); }
+  .delta-down { color: var(--red); }
+
+  /* Charts */
+  .charts-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 1.5rem; }
+  .chart-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 18px; }
+  .chart-title { font-size: 13px; font-weight: 600; color: var(--text); margin-bottom: 3px; }
+  .chart-sub { font-size: 11px; color: var(--text3); margin-bottom: 14px; }
+  .chart-wrap { position: relative; width: 100%; height: 190px; }
+  .chart-legend { display: flex; flex-wrap: wrap; gap: 12px; margin-bottom: 12px; }
+  .legend-item { display: flex; align-items: center; gap: 5px; font-size: 11px; color: var(--text2); }
+  .legend-swatch { width: 10px; height: 10px; border-radius: 2px; flex-shrink: 0; }
+
+  /* Demo bars */
+  .demo-bar-row { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+  .demo-bar-label { font-size: 11px; color: var(--text2); width: 36px; text-align: right; flex-shrink: 0; }
+  .demo-bar-track { flex: 1; height: 6px; background: var(--surface2); border-radius: 3px; overflow: hidden; }
+  .demo-bar-fill { height: 100%; border-radius: 3px; transition: width 0.4s; }
+  .demo-bar-pct { font-size: 11px; color: var(--text3); width: 32px; text-align: right; flex-shrink: 0; }
+
+  /* Posts table */
+  .posts-section { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; margin-bottom: 1.5rem; }
+  .posts-section table { width: 100%; border-collapse: collapse; font-size: 12px; table-layout: fixed; }
+  .posts-section th { padding: 10px 14px; text-align: left; font-size: 11px; font-weight: 600; color: var(--text2); border-bottom: 1px solid var(--border); background: var(--surface2); }
+  .posts-section td { padding: 11px 14px; color: var(--text); border-bottom: 1px solid var(--border); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .posts-section tr:last-child td { border-bottom: none; }
+  .posts-section tr:hover td { background: var(--surface2); }
+  .type-badge { display: inline-block; padding: 2px 8px; border-radius: 99px; font-size: 10px; font-weight: 600; }
+  .type-reel { background: #EEEDFE; color: #3C3489; }
+  .type-photo { background: #E1F5EE; color: #085041; }
+  .type-carousel { background: #FAEEDA; color: #633806; }
+
+  .footer { font-size: 11px; color: var(--text3); text-align: center; padding: 8px 0 0; }
+
+  @media (max-width: 700px) {
+    .charts-grid { grid-template-columns: 1fr; }
+    .header { flex-direction: column; align-items: flex-start; gap: 12px; }
+  }
+</style>
+</head>
+<body>
+<div class="container">
+
+  <div class="header">
+    <div class="brand">
+      <div class="ig-icon">
+        <svg viewBox="0 0 24 24"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z"/></svg>
+      </div>
+      <div>
+        <div class="brand-name">Instagram Analytics</div>
+        <div class="brand-sub" id="account-handle">Connect your account to begin</div>
+      </div>
+    </div>
+    <div class="header-right">
+      <span class="status-pill" id="status-pill"><span class="dot"></span>Demo mode</span>
+      <button class="btn" id="connect-btn" onclick="startAuth()">Connect Instagram</button>
+    </div>
+  </div>
+
+  <div class="setup-guide" id="setup-guide">
+    <div class="setup-title">How to connect your Instagram account</div>
+    <div class="setup-step">
+      <div class="step-num">1</div>
+      <div class="step-text">Your Instagram must be a <strong>Professional account</strong> (Business or Creator) linked to a Facebook Page.</div>
+    </div>
+    <div class="setup-step">
+      <div class="step-num">2</div>
+      <div class="step-text">In Meta for Developers, get your <strong>App ID</strong> from <code>App settings → Basic</code>.</div>
+    </div>
+    <div class="setup-step">
+      <div class="step-num">3</div>
+      <div class="step-text">Paste it below, then click <strong>Connect Instagram</strong>. You'll log in with Facebook and grant permissions. The redirect will come back to this file.</div>
+    </div>
+    <div class="app-id-row">
+      <input type="text" id="app-id-input" placeholder="Your Meta App ID (e.g. 1234567890123456)" />
+      <button class="btn" onclick="saveAppId()">Save App ID</button>
+    </div>
+  </div>
+
+  <div class="error-card" id="error-banner"></div>
+
+  <div class="range-tabs">
+    <button class="range-tab active" onclick="setRange(7,this)">7 days</button>
+    <button class="range-tab" onclick="setRange(14,this)">14 days</button>
+    <button class="range-tab" onclick="setRange(28,this)">28 days</button>
+  </div>
+
+  <div class="section-label">Overview</div>
+  <div class="metrics-grid">
+    <div class="metric-card"><div class="metric-label">Followers</div><div class="metric-value" id="m-followers">—</div><div class="metric-delta" id="d-followers"></div></div>
+    <div class="metric-card"><div class="metric-label">Reach</div><div class="metric-value" id="m-reach">—</div><div class="metric-delta" id="d-reach"></div></div>
+    <div class="metric-card"><div class="metric-label">Impressions</div><div class="metric-value" id="m-impressions">—</div><div class="metric-delta" id="d-impressions"></div></div>
+    <div class="metric-card"><div class="metric-label">Total likes</div><div class="metric-value" id="m-likes">—</div><div class="metric-delta" id="d-likes"></div></div>
+    <div class="metric-card"><div class="metric-label">Comments</div><div class="metric-value" id="m-comments">—</div><div class="metric-delta" id="d-comments"></div></div>
+    <div class="metric-card"><div class="metric-label">Saves</div><div class="metric-value" id="m-saves">—</div><div class="metric-delta" id="d-saves"></div></div>
+  </div>
+
+  <div class="charts-grid">
+    <div class="chart-card">
+      <div class="chart-title">Reach & Impressions</div>
+      <div class="chart-sub">Daily trend</div>
+      <div class="chart-legend" id="legend-reach">
+        <span class="legend-item"><span class="legend-swatch" style="background:#378ADD;"></span>Reach</span>
+        <span class="legend-item"><span class="legend-swatch" style="background:#1D9E75;border:1px dashed #1D9E75;background:transparent;"></span>Impressions</span>
+      </div>
+      <div class="chart-wrap"><canvas id="chart-reach" role="img" aria-label="Daily reach and impressions">Reach and impressions trend.</canvas></div>
+    </div>
+    <div class="chart-card">
+      <div class="chart-title">Engagement</div>
+      <div class="chart-sub">Likes · Comments · Saves</div>
+      <div class="chart-legend">
+        <span class="legend-item"><span class="legend-swatch" style="background:#D85A30;"></span>Likes</span>
+        <span class="legend-item"><span class="legend-swatch" style="background:#7F77DD;"></span>Comments</span>
+        <span class="legend-item"><span class="legend-swatch" style="background:#BA7517;"></span>Saves</span>
+      </div>
+      <div class="chart-wrap"><canvas id="chart-engage" role="img" aria-label="Daily engagement breakdown">Engagement over time.</canvas></div>
+    </div>
+  </div>
+
+  <div class="charts-grid">
+    <div class="chart-card">
+      <div class="chart-title">Content type mix</div>
+      <div class="chart-sub">By post count</div>
+      <div class="chart-legend" id="type-legend"></div>
+      <div class="chart-wrap" style="height:160px;"><canvas id="chart-type" role="img" aria-label="Content type donut chart">Content type breakdown.</canvas></div>
+    </div>
+    <div class="chart-card">
+      <div class="chart-title">Follower age & gender</div>
+      <div class="chart-sub">Audience demographics</div>
+      <div id="demo-bars" style="margin-top:8px;"></div>
+    </div>
+  </div>
+
+  <div class="section-label">Recent posts</div>
+  <div class="posts-section">
+    <table>
+      <thead>
+        <tr>
+          <th style="width:34%;">Caption</th>
+          <th style="width:11%;">Type</th>
+          <th style="width:11%;">Reach</th>
+          <th style="width:11%;">Likes</th>
+          <th style="width:11%;">Comments</th>
+          <th style="width:11%;">Saves</th>
+          <th style="width:11%;">Eng %</th>
+        </tr>
+      </thead>
+      <tbody id="posts-tbody"></tbody>
+    </table>
+  </div>
+
+  <div class="footer">Data via Instagram Graph API &nbsp;·&nbsp; Only Professional accounts supported &nbsp;·&nbsp; Refresh to update</div>
+</div>
+
+<script>
+let token = localStorage.getItem('ig_token');
+let igAccountId = localStorage.getItem('ig_account_id');
+let appId = localStorage.getItem('ig_app_id');
+let currentRange = 7;
+let charts = {};
+let isDemo = true;
+
+if (appId) document.getElementById('app-id-input').value = appId;
+
+const fmt = n => n >= 1e6 ? (n/1e6).toFixed(1)+'M' : n >= 1e3 ? (n/1e3).toFixed(1)+'K' : String(Math.round(n));
+
+function saveAppId() {
+  const v = document.getElementById('app-id-input').value.trim();
+  if (!v) { alert('Please enter your App ID.'); return; }
+  localStorage.setItem('ig_app_id', v);
+  appId = v;
+  alert('App ID saved! Now click Connect Instagram.');
+}
+
+function showError(msg) {
+  const el = document.getElementById('error-banner');
+  el.textContent = msg;
+  el.style.display = 'block';
+}
+
+function setRange(days, btn) {
+  currentRange = days;
+  document.querySelectorAll('.range-tab').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  if (isDemo) renderDemo(); else fetchLive();
+}
+
+function startAuth() {
+  if (!appId) { showError('Please enter and save your Meta App ID first.'); return; }
+  const redirect = encodeURIComponent(location.href.split('#')[0].split('?')[0]);
+  const scope = 'instagram_basic,instagram_manage_insights,pages_show_list,pages_read_engagement';
+  const url = `https://www.facebook.com/v19.0/dialog/oauth?client_id=${appId}&redirect_uri=${redirect}&scope=${scope}&response_type=token`;
+  location.href = url;
+}
+
+// Handle OAuth redirect — token comes back in URL hash
+function handleOAuthCallback() {
+  const hash = location.hash;
+  if (!hash.includes('access_token')) return false;
+  const params = new URLSearchParams(hash.replace('#', ''));
+  const t = params.get('access_token');
+  if (!t) return false;
+  token = t;
+  localStorage.setItem('ig_token', t);
+  history.replaceState(null, '', location.pathname);
+  resolveIgAccount(t);
+  return true;
+}
+
+async function resolveIgAccount(userToken) {
+  try {
+    // Get pages linked to the user
+    const r = await fetch(`https://graph.facebook.com/v19.0/me/accounts?access_token=${userToken}`);
+    const d = await r.json();
+    if (d.error) { showError('Error: ' + d.error.message); return; }
+    const pages = d.data || [];
+    if (!pages.length) { showError('No Facebook Pages found. Link your Instagram to a Facebook Page first.'); return; }
+
+    // Find page with linked IG business account
+    for (const page of pages) {
+      const r2 = await fetch(`https://graph.facebook.com/v19.0/${page.id}?fields=instagram_business_account&access_token=${page.access_token}`);
+      const d2 = await r2.json();
+      if (d2.instagram_business_account?.id) {
+        igAccountId = d2.instagram_business_account.id;
+        token = page.access_token; // use page token for insights
+        localStorage.setItem('ig_token', token);
+        localStorage.setItem('ig_account_id', igAccountId);
+        fetchLive();
+        return;
+      }
+    }
+    showError('No Instagram Business account linked to your Facebook Pages. Make sure your Instagram is set to Professional and linked.');
+  } catch(e) {
+    showError('Auth error: ' + e.message);
+  }
+}
+
+async function fetchLive() {
+  if (!token || !igAccountId) return;
+  isDemo = false;
+  document.getElementById('status-pill').innerHTML = '<span class="dot"></span>Live';
+  document.getElementById('status-pill').className = 'status-pill live';
+  document.getElementById('connect-btn').textContent = 'Reconnect';
+  document.getElementById('connect-btn').classList.add('connected');
+  document.getElementById('setup-guide').style.display = 'none';
+
+  const since = Math.floor(Date.now()/1000) - currentRange * 86400;
+  const until = Math.floor(Date.now()/1000);
+  const base = 'https://graph.facebook.com/v19.0';
+
+  try {
+    const [profileRes, insightsRes, mediaRes] = await Promise.all([
+      fetch(`${base}/${igAccountId}?fields=username,followers_count,media_count&access_token=${token}`),
+      fetch(`${base}/${igAccountId}/insights?metric=reach,impressions&period=day&since=${since}&until=${until}&access_token=${token}`),
+      fetch(`${base}/${igAccountId}/media?fields=caption,media_type,like_count,comments_count,timestamp&limit=20&access_token=${token}`)
+    ]);
+
+    const profile = await profileRes.json();
+    const insights = await insightsRes.json();
+    const media = await mediaRes.json();
+
+    if (profile.error) { showError('API error: ' + profile.error.message); renderDemo(); return; }
+
+    document.getElementById('account-handle').textContent = '@' + profile.username;
+    setMetric('followers', fmt(profile.followers_count), '', true);
+
+    const reachData = insights.data?.find(m => m.name === 'reach')?.values || [];
+    const imprData = insights.data?.find(m => m.name === 'impressions')?.values || [];
+    const labels = reachData.map(v => { const d = new Date(v.end_time); return d.toLocaleDateString('en', {month:'short', day:'numeric'}); });
+    const reach = reachData.map(v => v.value);
+    const impr = imprData.map(v => v.value);
+    const sumR = reach.reduce((a,b)=>a+b,0);
+    const sumI = impr.reduce((a,b)=>a+b,0);
+
+    setMetric('reach', fmt(sumR), '', true);
+    setMetric('impressions', fmt(sumI), '', true);
+
+    drawLine('chart-reach', labels, [
+      {label:'Reach', data:reach, color:'#378ADD', dash:[]},
+      {label:'Impressions', data:impr, color:'#1D9E75', dash:[5,3]}
+    ]);
+
+    const posts = (media.data || []).map(m => ({
+      caption: m.caption || '(no caption)',
+      type: m.media_type === 'VIDEO' ? 'Reel' : m.media_type === 'CAROUSEL_ALBUM' ? 'Carousel' : 'Photo',
+      reach: 0, likes: m.like_count||0, comments: m.comments_count||0, saves: 0
+    }));
+
+    const sumL = posts.reduce((a,p)=>a+p.likes,0);
+    const sumC = posts.reduce((a,p)=>a+p.comments,0);
+    setMetric('likes', fmt(sumL), '', true);
+    setMetric('comments', fmt(sumC), '', true);
+    setMetric('saves', '—', '', true);
+
+    const flat = reach.length ? reach.map(() => Math.round(sumL/reach.length)) : [];
+    drawLine('chart-engage', labels, [
+      {label:'Likes', data: flat, color:'#D85A30', dash:[]}
+    ]);
+
+    const tc = {Reel:0, Photo:0, Carousel:0};
+    posts.forEach(p => { tc[p.type] = (tc[p.type]||0)+1; });
+    drawDonut('chart-type', Object.keys(tc), Object.values(tc), ['#7F77DD','#1D9E75','#BA7517']);
+    renderTypeLegend(Object.keys(tc), Object.values(tc), ['#7F77DD','#1D9E75','#BA7517']);
+    renderDemoBars();
+    renderPostsTable(posts.slice(0,7));
+
+  } catch(e) {
+    showError('Failed to load data. Your session may have expired — click Reconnect.');
+    renderDemo();
+  }
+}
+
+// ── Demo helpers ──────────────────────────────────────────────────────────────
+function genSeries(base, variance, days) {
+  return Array.from({length:days}, (_,i) => Math.round(base + (Math.random()-0.4)*variance + i*(base*0.02)));
+}
+function getLabels(days) {
+  return Array.from({length:days}, (_,i) => { const d=new Date(); d.setDate(d.getDate()-days+i+1); return d.toLocaleDateString('en',{month:'short',day:'numeric'}); });
+}
+
+function renderDemo() {
+  isDemo = true;
+  const d = currentRange, labels = getLabels(d);
+  const reach = genSeries(4200,1200,d), impr = reach.map(r=>Math.round(r*1.6+Math.random()*400));
+  const likes = genSeries(320,100,d), comments = genSeries(28,12,d), saves = genSeries(54,20,d);
+  const sumR=reach.reduce((a,b)=>a+b,0), sumI=impr.reduce((a,b)=>a+b,0);
+  const sumL=likes.reduce((a,b)=>a+b,0), sumC=comments.reduce((a,b)=>a+b,0), sumS=saves.reduce((a,b)=>a+b,0);
+
+  setMetric('followers','12.4K','+2.1% vs prev',true);
+  setMetric('reach',fmt(sumR),'+8.3% vs prev',true);
+  setMetric('impressions',fmt(sumI),'+5.1% vs prev',true);
+  setMetric('likes',fmt(sumL),'+11.2% vs prev',true);
+  setMetric('comments',fmt(sumC),'-1.4% vs prev',false);
+  setMetric('saves',fmt(sumS),'+14.7% vs prev',true);
+
+  drawLine('chart-reach', labels, [
+    {label:'Reach', data:reach, color:'#378ADD', dash:[]},
+    {label:'Impressions', data:impr, color:'#1D9E75', dash:[5,3]}
+  ]);
+  drawLine('chart-engage', labels, [
+    {label:'Likes', data:likes, color:'#D85A30', dash:[]},
+    {label:'Comments', data:comments, color:'#7F77DD', dash:[4,2]},
+    {label:'Saves', data:saves, color:'#BA7517', dash:[2,2]}
+  ]);
+  drawDonut('chart-type',['Reels','Photos','Carousels'],[14,9,5],['#7F77DD','#1D9E75','#BA7517']);
+  renderTypeLegend(['Reels','Photos','Carousels'],[14,9,5],['#7F77DD','#1D9E75','#BA7517']);
+  renderDemoBars();
+  renderPostsTable([
+    {caption:'Behind the scenes of our latest shoot — the team worked so hard',type:'Reel',reach:8420,likes:612,comments:48,saves:93},
+    {caption:'New product launch — what do you think? Drop your thoughts below',type:'Carousel',reach:6100,likes:441,comments:72,saves:130},
+    {caption:'Morning routine that changed everything for my productivity',type:'Reel',reach:11200,likes:890,comments:34,saves:201},
+    {caption:'Simple but effective — our most requested flat lay',type:'Photo',reach:3800,likes:298,comments:19,saves:55},
+    {caption:'Q&A recap — you asked, we answered all 50 questions',type:'Carousel',reach:4900,likes:320,comments:88,saves:67},
+    {caption:'The golden hour we have been chasing all month',type:'Photo',reach:5600,likes:510,comments:22,saves:44},
+    {caption:'This collab came out better than we imagined',type:'Reel',reach:9800,likes:730,comments:61,saves:115},
+  ]);
+}
+
+function setMetric(id, val, delta, up) {
+  document.getElementById('m-'+id).textContent = val;
+  const el = document.getElementById('d-'+id);
+  if (delta) {
+    el.textContent = (up ? '▲ ' : '▼ ') + delta;
+    el.className = 'metric-delta ' + (up ? 'delta-up' : 'delta-down');
+  }
+}
+
+function drawLine(id, labels, series) {
+  if (charts[id]) charts[id].destroy();
+  charts[id] = new Chart(document.getElementById(id).getContext('2d'), {
+    type: 'line',
+    data: {
+      labels,
+      datasets: series.map(s => ({
+        label: s.label, data: s.data,
+        borderColor: s.color, borderWidth: 1.5,
+        borderDash: s.dash,
+        pointRadius: 0, pointHoverRadius: 3,
+        fill: false, tension: 0.35,
+      }))
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: false }, tooltip: { mode: 'index', intersect: false } },
+      scales: {
+        x: { grid: { display: false }, ticks: { font:{size:10}, maxRotation:0, autoSkip:true, maxTicksLimit:7 } },
+        y: { grid: { color:'rgba(0,0,0,0.05)' }, ticks: { font:{size:10}, callback: v => fmt(v) } }
+      }
+    }
+  });
+}
+
+function drawDonut(id, labels, data, colors) {
+  if (charts[id]) charts[id].destroy();
+  charts[id] = new Chart(document.getElementById(id).getContext('2d'), {
+    type: 'doughnut',
+    data: { labels, datasets: [{ data, backgroundColor: colors, borderWidth: 2, borderColor: '#fff' }] },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: false }, tooltip: { callbacks: { label: ctx => ` ${ctx.label}: ${ctx.raw} posts` } } },
+      cutout: '65%'
+    }
+  });
+}
+
+function renderTypeLegend(labels, data, colors) {
+  const total = data.reduce((a,b)=>a+b,0);
+  document.getElementById('type-legend').innerHTML = labels.map((l,i) =>
+    `<span class="legend-item"><span class="legend-swatch" style="background:${colors[i]};"></span>${l} ${Math.round(data[i]/total*100)}%</span>`
+  ).join('');
+}
+
+function renderDemoBars() {
+  const groups = [
+    {label:'13-17',m:8,f:12},{label:'18-24',m:22,f:31},
+    {label:'25-34',m:18,f:24},{label:'35-44',m:11,f:14},{label:'45+',m:6,f:9}
+  ];
+  const max = 31;
+  document.getElementById('demo-bars').innerHTML = `
+    <div style="display:flex;gap:6px;margin-bottom:10px;padding-left:44px;">
+      <span style="flex:1;font-size:10px;color:var(--text3);">Male</span>
+      <span style="flex:1;font-size:10px;color:var(--text3);">Female</span>
+      <span style="width:32px;"></span>
+    </div>
+    ${groups.map(g=>`
+    <div class="demo-bar-row">
+      <span class="demo-bar-label">${g.label}</span>
+      <div class="demo-bar-track"><div class="demo-bar-fill" style="width:${Math.round(g.m/max*100)}%;background:#378ADD;"></div></div>
+      <div class="demo-bar-track"><div class="demo-bar-fill" style="width:${Math.round(g.f/max*100)}%;background:#cc2366;"></div></div>
+      <span class="demo-bar-pct">${g.m+g.f}%</span>
+    </div>`).join('')}
+    <div style="display:flex;gap:12px;margin-top:10px;padding-left:44px;font-size:11px;color:var(--text2);">
+      <span><span style="display:inline-block;width:8px;height:8px;background:#378ADD;border-radius:2px;margin-right:4px;"></span>Male</span>
+      <span><span style="display:inline-block;width:8px;height:8px;background:#cc2366;border-radius:2px;margin-right:4px;"></span>Female</span>
+    </div>`;
+}
+
+function renderPostsTable(posts) {
+  const tc = {Reel:'type-reel',Photo:'type-photo',Carousel:'type-carousel'};
+  document.getElementById('posts-tbody').innerHTML = posts.map(p => {
+    const eng = p.reach > 0 ? ((p.likes+p.comments+p.saves)/p.reach*100).toFixed(1) : '—';
+    return `<tr>
+      <td title="${p.caption}">${p.caption}</td>
+      <td><span class="type-badge ${tc[p.type]||''}">${p.type}</span></td>
+      <td>${fmt(p.reach)}</td><td>${fmt(p.likes)}</td>
+      <td>${fmt(p.comments)}</td><td>${fmt(p.saves)}</td>
+      <td>${eng}${eng !== '—' ? '%' : ''}</td>
+    </tr>`;
+  }).join('');
+}
+
+// Boot
+if (!handleOAuthCallback()) {
+  if (token && igAccountId) { fetchLive(); }
+  else { renderDemo(); }
+}
+</script>
+</body>
+</html>
